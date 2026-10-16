@@ -1,0 +1,146 @@
+<!-- Full-page overlay: only used for slow "navigate away" actions (assessment, settings, refresh) -->
+<div id="loading-overlay" class="fixed inset-0 bg-[#090d16]/85 backdrop-blur-sm z-50 flex flex-col items-center justify-center hidden">
+    <div class="spinner mb-4"></div>
+    <p class="text-white font-semibold text-sm">AI is thinking...</p>
+    <p class="text-slate-400 text-xs mt-1">This can take 10-30 seconds</p>
+</div>
+
+<style>
+    .md > *:first-child { margin-top: 0; }
+    .md h1, .md h2, .md h3 { font-weight: 700; color: #fff; margin: 1rem 0 .5rem; }
+    .md h1 { font-size: 1.15rem; } .md h2 { font-size: 1.05rem; } .md h3 { font-size: .95rem; }
+    .md p { margin: .5rem 0; }
+    .md ul { list-style: disc; padding-left: 1.25rem; margin: .5rem 0; }
+    .md ol { list-style: decimal; padding-left: 1.25rem; margin: .5rem 0; }
+    .md strong { color: #fff; }
+    .md table { width: 100%; border-collapse: collapse; margin: .75rem 0; font-size: .8rem; }
+    .md th, .md td { border: 1px solid rgba(255,255,255,.1); padding: .4rem .6rem; text-align: left; }
+    .md code { background: rgba(255,255,255,.06); padding: .1rem .3rem; border-radius: .25rem; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 2rem; height: 2rem; border: 3px solid rgba(99,102,241,.25); border-top-color: #6366f1; border-radius: 50%; animation: spin .8s linear infinite; }
+    .spinner-sm { display: inline-block; width: .9rem; height: .9rem; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; margin-right: .4rem; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-4px); opacity: 1; } }
+    .typing { display: inline-flex; gap: 4px; align-items: center; height: 1rem; }
+    .typing i { width: 6px; height: 6px; border-radius: 50%; background: #818cf8; animation: bounce 1.2s infinite ease-in-out; }
+    .typing i:nth-child(2) { animation-delay: .15s; }
+    .typing i:nth-child(3) { animation-delay: .3s; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+    (function () {
+        const overlay = document.getElementById('loading-overlay');
+
+        // Forms WITHOUT data-ai still use the full-page overlay (they navigate to another page anyway)
+        document.querySelectorAll('form:not([data-ai])').forEach(f =>
+            f.addEventListener('submit', () => overlay && overlay.classList.remove('hidden')));
+        window.addEventListener('pageshow', () => overlay && overlay.classList.add('hidden'));
+
+        // Render the AI's markdown (headings, bullets, bold, tables)
+        function renderMarkdown(root) {
+            root.querySelectorAll('.md').forEach(el => {
+                if (window.marked && window.DOMPurify) {
+                    el.innerHTML = DOMPurify.sanitize(marked.parse(el.textContent.trim()));
+                    el.classList.remove('whitespace-pre-wrap');
+                }
+            });
+        }
+        renderMarkdown(document);
+
+        const chatBox = document.getElementById('chat-container');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Post a form in the background and return the fresh copy of `selector` from the server's reply
+        async function postAndExtract(form, selector) {
+            const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const fresh = doc.querySelector(selector);
+            if (!fresh) { window.location.href = res.url; return null; }  // e.g. session expired -> login page
+            return fresh;
+        }
+
+        // ---------- Chat: instant user bubble + typing indicator where the reply will appear ----------
+        const chatForm = document.querySelector('form[data-ai="chat"]');
+        if (chatForm && chatBox) {
+            const input = chatForm.querySelector('input[name="message"]');
+            const btn = chatForm.querySelector('button[type="submit"]');
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const text = input.value.trim();
+                if (!text) return;
+                const body = new FormData(chatForm);
+
+                chatBox.querySelector('.empty-state')?.remove();
+
+                const mine = document.createElement('div');
+                mine.className = 'flex justify-end';
+                const mineBubble = document.createElement('div');
+                mineBubble.className = 'max-w-xl rounded-2xl p-4 text-sm leading-relaxed bg-indigo-600 text-white';
+                mineBubble.textContent = text;
+                mine.appendChild(mineBubble);
+
+                const typing = document.createElement('div');
+                typing.className = 'flex justify-start';
+                typing.innerHTML = '<div class="rounded-2xl px-4 py-3 bg-[#0d121f] border border-white/5"><span class="typing"><i></i><i></i><i></i></span></div>';
+
+                chatBox.append(mine, typing);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                input.value = '';
+                input.disabled = true;
+                btn.disabled = true;
+
+                try {
+                    const res = await fetch(chatForm.action, { method: 'POST', body, credentials: 'same-origin' });
+                    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                    const fresh = doc.getElementById('chat-container');
+                    if (!fresh) { window.location.href = res.url; return; }
+                    chatBox.innerHTML = fresh.innerHTML;
+                    renderMarkdown(chatBox);
+                } catch (err) {
+                    typing.innerHTML = '<div class="rounded-2xl p-4 bg-[#0d121f] border border-red-500/30 text-red-400 text-sm">Network error. Please try sending again.</div>';
+                } finally {
+                    input.disabled = false;
+                    btn.disabled = false;
+                    input.focus();
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            });
+        }
+
+        // ---------- Result panels (essays, career): spinner + rotating status inside the output box ----------
+        document.querySelectorAll('form[data-ai="result"]').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const selector = form.dataset.target;
+                const box = document.querySelector(selector);
+                const btn = form.querySelector('button[type="submit"]');
+                const originalLabel = btn.innerHTML;
+                const steps = (form.dataset.loading || 'Thinking').split('|');
+                let i = 0;
+
+                box.innerHTML = '<div class="flex flex-col items-center justify-center py-24 text-slate-400"><div class="spinner mb-4"></div><p class="text-sm" data-step></p></div>';
+                const label = box.querySelector('[data-step]');
+                label.textContent = steps[0] + '…';
+                const timer = setInterval(() => { i++; label.textContent = steps[i % steps.length] + '…'; }, 4000);
+
+                btn.disabled = true;
+                btn.classList.add('opacity-60', 'cursor-not-allowed');
+                btn.innerHTML = '<span class="spinner-sm"></span>Working…';
+
+                try {
+                    const fresh = await postAndExtract(form, selector);
+                    if (fresh) { box.innerHTML = fresh.innerHTML; renderMarkdown(box); }
+                } catch (err) {
+                    box.innerHTML = '<p class="text-red-400 text-sm text-center py-24">Network error. Please try again.</p>';
+                } finally {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                    btn.innerHTML = originalLabel;
+                }
+            });
+        });
+    })();
+</script>

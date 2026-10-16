@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathway - Coursework Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+        .card-bg { background-color: #111726; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-bg { background-color: #0d121f; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-bg { background-color: #0d121f; border: 1px solid rgba(255, 255, 255, 0.1); color: #f8fafc; }
+        .input-bg:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+        .btn-primary:hover { opacity: 0.9; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    {% include '_sidebar.html' %}
+
+    <main class="flex-1 overflow-y-auto p-8">
+        <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
+            <div>
+                <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 inline-block mb-3">Academic Roadmap</span>
+                <h1 class="text-3xl font-bold text-white">4-Year Coursework Plan</h1>
+                <p class="text-slate-400 text-sm mt-1">Tailored for your major: <span class="text-indigo-400 font-semibold">{{ session.get('primary_field', 'General STEM') }}</span></p>
+            </div>
+            <form action="/courses/reset" method="POST">
+                <button type="submit" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 font-semibold text-xs border border-white/10 transition">
+                    🔄 Re-generate AI Plan
+                </button>
+            </form>
+        </div>
+
+        {% if plan_error %}
+        <div class="mb-6 p-3 bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg">{{ plan_error }}</div>
+        {% endif %}
+
+        <!-- Rigor Trajectory -->
+        <div class="card-bg rounded-2xl p-6 mb-6">
+            <div class="flex flex-wrap justify-between items-start gap-4 mb-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Rigor Trajectory</h2>
+                    <p class="text-xs text-slate-400 mt-1">Colleges want to see you challenge yourself more each year. This chart updates live as you edit courses below.</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs uppercase font-semibold text-slate-400">AP / IB / Dual Credit planned</div>
+                    <div id="adv-count" class="text-2xl font-bold text-emerald-400">0</div>
+                </div>
+            </div>
+            <div class="relative h-56"><canvas id="rigor-chart"></canvas></div>
+        </div>
+
+        <form action="/courses/update" method="POST" data-ai="save">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                {% set grades = ["9th Grade", "10th Grade", "11th Grade", "12th Grade"] %}
+                {% set rigor_options = ["Regular", "Honors", "AP", "IB", "Dual Credit"] %}
+                {% set plan = session.get('four_year_plan') or {} %}
+
+                {% for grade in grades %}
+                {% set course_list = plan.get(grade, []) %}
+                <div class="card-bg rounded-2xl p-5">
+                    <h3 class="font-bold text-white text-lg mb-4 pb-2 border-b border-white/10">{{ grade }}</h3>
+                    <div class="space-y-3">
+                        {% for i in range(1, 7) %}
+                        {% set item = course_list[i - 1] if i <= course_list | length else none %}
+                        <div class="bg-[#0d121f] p-3 rounded-xl border border-white/5 space-y-2">
+                            <input type="text" name="course_{{ grade }}_{{ i }}" value="{{ item.Course if item else '' }}" data-grade="{{ grade }}" class="course-input w-full px-3 py-2 rounded-lg input-bg text-xs font-medium" placeholder="Add a course">
+                            <select name="rigor_{{ grade }}_{{ i }}" class="rigor-select w-full px-3 py-2 rounded-lg input-bg text-xs text-slate-300">
+                                {% for opt in rigor_options %}
+                                <option value="{{ opt }}" {% if item and item.Rigor == opt %}selected{% endif %}>{{ opt }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="w-full py-3.5 btn-primary text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/20">
+                Save Course Schedule Changes
+            </button>
+        </form>
+    </main>
+
+    <script>
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+        const GRADES = ['9th Grade', '10th Grade', '11th Grade', '12th Grade'];
+        const ADVANCED = ['AP', 'IB', 'Dual Credit'];
+
+        function countRigor() {
+            const out = {};
+            GRADES.forEach(g => out[g] = {Regular: 0, Honors: 0, Advanced: 0});
+            document.querySelectorAll('.course-input').forEach(input => {
+                if (!input.value.trim()) return;
+                const rigor = input.parentElement.querySelector('.rigor-select').value;
+                const bucket = ADVANCED.includes(rigor) ? 'Advanced' : (rigor === 'Honors' ? 'Honors' : 'Regular');
+                out[input.dataset.grade][bucket]++;
+            });
+            return out;
+        }
+
+        const rigorChart = new Chart(document.getElementById('rigor-chart'), {
+            type: 'bar',
+            data: {
+                labels: GRADES,
+                datasets: [
+                    {label: 'Regular', data: [], backgroundColor: '#475569'},
+                    {label: 'Honors', data: [], backgroundColor: '#818cf8'},
+                    {label: 'AP / IB / Dual Credit', data: [], backgroundColor: '#34d399'}
+                ]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    x: {stacked: true},
+                    y: {stacked: true, beginAtZero: true, ticks: {stepSize: 1}, title: {display: true, text: 'Courses'}}
+                },
+                plugins: {legend: {position: 'bottom'}}
+            }
+        });
+
+        function refreshRigor() {
+            const c = countRigor();
+            rigorChart.data.datasets[0].data = GRADES.map(g => c[g].Regular);
+            rigorChart.data.datasets[1].data = GRADES.map(g => c[g].Honors);
+            rigorChart.data.datasets[2].data = GRADES.map(g => c[g].Advanced);
+            rigorChart.update();
+            document.getElementById('adv-count').textContent = GRADES.reduce((n, g) => n + c[g].Advanced, 0);
+        }
+        document.querySelectorAll('.course-input, .rigor-select').forEach(el => {
+            el.addEventListener('input', refreshRigor);
+            el.addEventListener('change', refreshRigor);
+        });
+        refreshRigor();
+    </script>
+    {% include '_scripts.html' %}
+</body>
+</html>

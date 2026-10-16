@@ -1,0 +1,6 @@
+﻿secrets.toml
+users.db
+__pycache__/
+flask_session/
+user_uploads/
+.DS_Store

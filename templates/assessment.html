@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathway - Student Profile Assessment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+        .card-bg { background-color: #111726; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-bg { background-color: #0d121f; border: 1px solid rgba(255, 255, 255, 0.1); color: #f8fafc; }
+        .input-bg:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.9; }
+        .sidebar-collapsed { width: 0 !important; padding: 0 !important; overflow: hidden; border: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-2xl card-bg rounded-2xl p-8 shadow-2xl my-8">
+        <div class="text-center mb-8">
+            <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30">Profile Setup</span>
+            <h1 class="text-3xl font-bold text-white mt-4">Tell Us About Your Academic Profile</h1>
+            <p class="text-slate-400 text-sm mt-1">Our AI uses this data to map your 4-year coursework and top 20 college match list.</p>
+        </div>
+
+        <form action="/assessment" method="POST" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- High School -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">High School Name</label>
+                    <input type="text" name="student_school" required placeholder="e.g. Elkins High School, Missouri City, TX" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+
+                <!-- Grade Level -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Current Grade Level</label>
+                    <select name="grade_level" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                        <option value="9th Grade">9th Grade</option>
+                        <option value="10th Grade">10th Grade</option>
+                        <option value="11th Grade">11th Grade</option>
+                        <option value="12th Grade">12th Grade</option>
+                    </select>
+                </div>
+
+                <!-- Intended Major -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Primary Field / Intended Major</label>
+                    <input type="text" name="primary_field" required placeholder="e.g. Computer Science & AI" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+
+                <!-- Unweighted GPA -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">
+                        Unweighted GPA <span class="text-slate-500 font-normal lowercase">(type N/A if none)</span>
+                    </label>
+                    <input type="text" name="gpa_estimate" placeholder="e.g. 3.95" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+
+                <!-- Weighted GPA -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">
+                        Weighted GPA <span class="text-slate-500 font-normal lowercase">(type N/A if none)</span>
+                    </label>
+                    <input type="text" name="gpa_weighted" placeholder="e.g. 4.45" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+
+                <!-- Class Rank -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">
+                        Class Rank / Decile <span class="text-slate-500 font-normal lowercase">(type N/A if none)</span>
+                    </label>
+                    <input type="text" name="class_rank" placeholder="e.g. Top 5%" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+
+                <!-- Test Scores -->
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">
+                        SAT / ACT Scores <span class="text-slate-500 font-normal lowercase">(type N/A if none)</span>
+                    </label>
+                    <input type="text" name="test_scores" placeholder="e.g. SAT: 1540 or N/A" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 btn-primary text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/20">
+                Generate AI Roadmap & College Matches →
+            </button>
+        </form>
+    </div>
+    {% include '_scripts.html' %}
+</body>
+</html>

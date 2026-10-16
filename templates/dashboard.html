@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathway - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+        .card-bg { background-color: #111726; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-bg { background-color: #0d121f; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+        .hero-banner { background: linear-gradient(135deg, #111726 0%, #0d121f 100%); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+        .btn-primary:hover { opacity: 0.9; }
+        .sidebar-collapsed { width: 0 !important; padding: 0 !important; overflow: hidden; border: none; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    {% include '_sidebar.html' %}
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-8">
+        
+        <!-- Hero Banner -->
+        <div class="hero-banner rounded-2xl p-8 mb-8 relative overflow-hidden shadow-xl">
+            <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 inline-block mb-3">AI Admissions Platform</span>
+            <h1 class="text-3xl font-bold text-white">Welcome back, {{ email.split('@')[0].capitalize() if email else 'Student' }}!</h1>
+            <p class="text-slate-400 text-sm mt-1">Your personalized college roadmap and career intelligence center.</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="card-bg p-5 rounded-2xl">
+                <div class="text-xs font-semibold text-slate-400 uppercase mb-1">Grade Level</div>
+                <div class="text-2xl font-bold text-white">{{ session.get('grade_level', 'N/A') }}</div>
+            </div>
+            <div class="card-bg p-5 rounded-2xl">
+                <div class="text-xs font-semibold text-slate-400 uppercase mb-1">Intended Major</div>
+                <div class="text-lg font-bold text-indigo-400 truncate">{{ session.get('primary_field', 'N/A') }}</div>
+            </div>
+            <div class="card-bg p-5 rounded-2xl">
+                <div class="text-xs font-semibold text-slate-400 uppercase mb-1">Unweighted GPA</div>
+                <div class="text-2xl font-bold text-emerald-400">{{ session.get('gpa_estimate', 'N/A') }}</div>
+            </div>
+            <div class="card-bg p-5 rounded-2xl">
+                <div class="text-xs font-semibold text-slate-400 uppercase mb-1">Target Matches</div>
+                <div class="text-2xl font-bold text-white">{{ session.get('top_20_colleges', []) | length }} Schools</div>
+            </div>
+        </div>
+
+        <!-- College Matches -->
+        {% set verified = colleges | selectattr('data_source', 'equalto', 'scorecard') | list | length %}
+        <div class="card-bg rounded-2xl p-6 mb-8">
+            <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Your College Match List</h2>
+                    <p class="text-xs text-slate-400 mt-1">★ Saved: <span id="saved-count">{{ saved | length }}</span> &middot; <a href="/compare" class="text-indigo-400 hover:underline">Compare saved schools →</a></p>
+                </div>
+                <div class="flex items-center gap-3">
+                    {% if verified %}
+                    <span class="text-xs text-emerald-400 font-semibold bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">Real data: US Dept. of Education</span>
+                    {% endif %}
+                    <form action="/colleges/refresh" method="POST">
+                        <button type="submit" class="text-xs font-semibold text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg border border-indigo-500/20 transition">↻ Refresh matches</button>
+                    </form>
+                </div>
+            </div>
+
+            {% if colleges and not verified %}
+            <div class="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-lg">
+                These numbers are AI estimates only. Add a free <code>SCORECARD_API_KEY</code> to <code>secrets.toml</code>, then click “Refresh matches” to load real acceptance rates, test scores, and costs.
+            </div>
+            {% endif %}
+
+            {% if colleges %}
+            <div class="flex gap-2 mb-5 overflow-x-auto">
+                {% for f in ['All', 'Reach', 'Target', 'Safety'] %}
+                <button data-filter="{{ f }}" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition {% if f == 'All' %}bg-indigo-600 text-white{% else %}bg-[#0d121f] text-slate-400 hover:text-white border border-white/5{% endif %}">
+                    {{ f }}{% if f != 'All' %} ({{ colleges | selectattr('category', 'equalto', f) | list | length }}){% else %} ({{ colleges | length }}){% endif %}
+                </button>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div id="college-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {% if colleges %}
+                    {% for college in colleges %}
+                    <div class="college-card bg-[#0d121f] border border-white/5 p-5 rounded-xl hover:border-indigo-500/40 transition flex flex-col justify-between" data-cat="{{ college.category }}">
+                        <div>
+                            <div class="flex justify-between items-start mb-1 gap-2">
+                                <h3 class="font-bold text-white text-base">{{ college.scorecard_name or college.name }}</h3>
+                                <span class="text-xs px-2.5 py-1 rounded-lg font-semibold shrink-0
+                                    {% if college.category == 'Safety' %} bg-blue-500/10 text-blue-400 border border-blue-500/20
+                                    {% elif college.category == 'Target' %} bg-emerald-500/10 text-emerald-400 border border-emerald-500/20
+                                    {% elif college.category == 'Reach' %} bg-amber-500/10 text-amber-400 border border-amber-500/20
+                                    {% else %} bg-rose-500/10 text-rose-400 border border-rose-500/20 {% endif %}">
+                                    {{ college.category }}
+                                </span>
+                            </div>
+                            {% if college.city %}
+                            <p class="text-xs text-slate-500 mb-3">{{ college.city }}, {{ college.state }} &middot; {{ college.ownership or 'US college' }}{% if college.size %} &middot; {{ college.size | num }} students{% endif %}</p>
+                            {% endif %}
+
+                            {% if college.data_source == 'scorecard' %}
+                            {% set user_sat = session.get('test_scores') | sat %}
+                            <div class="grid grid-cols-2 gap-2 mb-3 text-xs">
+                                <div class="bg-white/5 rounded-lg p-2"><div class="text-slate-500">Acceptance rate</div><div class="font-bold text-white">{{ college.admit_rate | pct }}</div></div>
+                                <div class="bg-white/5 rounded-lg p-2"><div class="text-slate-500">SAT mid-50%</div><div class="font-bold text-white">{% if college.sat_25 and college.sat_75 %}{{ college.sat_25 | int }}–{{ college.sat_75 | int }}{% else %}Test-optional / n/a{% endif %}</div></div>
+                                <div class="bg-white/5 rounded-lg p-2"><div class="text-slate-500">Sticker price / yr</div><div class="font-bold text-white">{{ college.net_price | usd }}</div></div>
+                                <div class="bg-white/5 rounded-lg p-2"><div class="text-slate-500">4-yr grad rate</div><div class="font-bold text-white">{{ college.grad_rate | pct }}</div></div>
+                            </div>
+                            {% if user_sat and college.sat_25 and college.sat_75 and college.sat_75 > college.sat_25 %}
+                            {% set raw = ((user_sat - college.sat_25) / (college.sat_75 - college.sat_25) * 100) | round %}
+                            {% set pos = [[raw, 0] | max, 100] | min %}
+                            <div class="mb-4">
+                                <div class="relative h-2 rounded-full bg-white/10">
+                                    <div class="absolute inset-y-0 rounded-full bg-indigo-500/40" style="left: 0; width: 100%;"></div>
+                                    <div class="sat-marker absolute -top-1 w-1 h-4 rounded bg-indigo-300" data-pos="{{ pos }}" title="Your score: {{ user_sat }}"></div>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                                    <span>{{ college.sat_25 | int }}</span>
+                                    <span class="text-indigo-300">You: {{ user_sat }}</span>
+                                    <span>{{ college.sat_75 | int }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endif %}
+
+                            <p class="text-xs text-indigo-300 font-semibold mb-2">Strategy: {{ college.strategy }}</p>
+                            <p class="text-xs text-slate-400 leading-relaxed mb-4">{{ college.reason or college.rationale }}</p>
+                        </div>
+                        <div>
+                            <div class="pt-3 border-t border-white/5 flex justify-between items-center text-xs text-slate-400">
+                                <span title="{{ college.basis }}">Est. chance</span>
+                                <span class="font-bold text-indigo-400">{% if college.match_score %}~{{ college.match_score }}%{% else %}n/a{% endif %}</span>
+                            </div>
+                            {% if college.basis %}<p class="text-[11px] text-slate-500 mt-1">Based on {{ college.basis }}</p>{% endif %}
+                            <div class="flex justify-between items-center mt-3">
+                                <button type="button" class="save-btn text-xs font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition {% if college.name in saved %}text-amber-400{% else %}text-slate-300{% endif %}" data-name="{{ college.name }}">{% if college.name in saved %}★ Saved{% else %}☆ Save{% endif %}</button>
+                                {% if college.url %}<a href="{{ college.url }}" target="_blank" rel="noopener" class="text-xs text-indigo-400 hover:underline">Website ↗</a>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-span-3 text-center py-12">
+                        <p class="text-slate-400 text-sm mb-4">No college matches yet. If you just finished your assessment, click “Refresh matches” (the AI may have hit a quota limit; check the terminal).</p>
+                        <a href="/assessment" class="inline-block px-5 py-2.5 btn-primary text-white text-sm font-semibold rounded-xl">Retake Assessment</a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <p class="text-[11px] text-slate-500 mt-6">Acceptance rates, test scores, costs, and graduation rates come from the US Dept. of Education College Scorecard. “Est. chance” is a rough estimate from selectivity plus your stats. It is not a prediction, since essays, activities, and context matter a lot.</p>
+        </div>
+                <!-- Admissions Landscape -->
+        <div class="card-bg rounded-2xl p-6 mb-8">
+            <h2 class="text-xl font-bold text-white">Your Admissions Landscape</h2>
+            <p class="text-xs text-slate-400 mt-1 mb-4">Every school on your list: how likely you are to get in (up) vs. what it really costs per year (right). <span class="text-emerald-400 font-semibold">Top-left = likely and affordable.</span></p>
+            <div id="landscape-wrap" class="relative h-96" data-colleges='{{ colleges | tojson }}'><canvas id="landscape-chart"></canvas></div>
+            <p id="landscape-empty" class="hidden text-sm text-slate-500 text-center py-16">This chart appears once your schools have real College Scorecard data. Click “Refresh matches”.</p>
+        </div>
+
+        <!-- Feedback -->
+        <div class="card-bg rounded-2xl p-6 mb-8 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h3 class="font-bold text-white">Is this helping you?</h3>
+                <p class="text-xs text-slate-400">Your answer helps us improve the college matches.</p>
+            </div>
+            <div class="flex items-center gap-2" id="feedback-buttons">
+                <button data-rate="up" class="px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-sm font-semibold hover:bg-emerald-500/20">👍 Yes</button>
+                <button data-rate="down" class="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-semibold hover:bg-red-500/20">👎 Not really</button>
+            </div>
+            <div id="feedback-thanks" class="hidden w-full text-sm text-emerald-400">Thanks! That helps a lot.</div>
+        </div>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+        <script>
+            // Place the "you" marker on each SAT bar
+            document.querySelectorAll('.sat-marker').forEach(m => {
+                m.style.left = 'calc(' + m.dataset.pos + '% - 2px)';
+            });
+
+            (function () {
+                const wrap = document.getElementById('landscape-wrap');
+                const colleges = JSON.parse(wrap.dataset.colleges);
+                const pts = colleges.filter(c => c.match_score != null && c.net_price != null);
+                if (!pts.length) {
+                    wrap.classList.add('hidden');
+                    document.getElementById('landscape-empty').classList.remove('hidden');
+                    return;
+                }
+                Chart.defaults.color = '#94a3b8';
+                Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+                const colors = {Reach: '#f59e0b', Target: '#34d399', Safety: '#60a5fa'};
+                const datasets = ['Reach', 'Target', 'Safety'].map(cat => ({
+                    label: cat,
+                    backgroundColor: colors[cat],
+                    pointRadius: 7,
+                    pointHoverRadius: 10,
+                    data: pts.filter(c => c.category === cat).map(c => ({x: c.net_price, y: c.match_score, name: c.scorecard_name || c.name}))
+                }));
+                new Chart(document.getElementById('landscape-chart'), {
+                    type: 'scatter',
+                    data: {datasets},
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {title: {display: true, text: 'Average net price per year'}, ticks: {callback: v => '$' + v.toLocaleString()}},
+                            y: {min: 0, max: 100, title: {display: true, text: 'Estimated chance (%)'}}
+                        },
+                        plugins: {
+                            legend: {position: 'bottom'},
+                            tooltip: {callbacks: {label: c => c.raw.name + ': ~' + c.raw.y + '% chance, $' + c.raw.x.toLocaleString() + '/yr'}}
+                        }
+                    }
+                });
+            })();
+
+            document.querySelectorAll('[data-rate]').forEach(btn => btn.addEventListener('click', async () => {
+                const res = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({rating: btn.dataset.rate})
+                });
+                if (res.ok) {
+                    document.getElementById('feedback-buttons').classList.add('hidden');
+                    document.getElementById('feedback-thanks').classList.remove('hidden');
+                }
+            }));
+        </script>
+    </main>
+
+    <script>
+        document.querySelectorAll('[data-filter]').forEach(btn => btn.addEventListener('click', () => {
+            const f = btn.dataset.filter;
+            document.querySelectorAll('[data-filter]').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white');
+                b.classList.add('bg-[#0d121f]', 'text-slate-400');
+            });
+            btn.classList.add('bg-indigo-600', 'text-white');
+            btn.classList.remove('bg-[#0d121f]', 'text-slate-400');
+            document.querySelectorAll('.college-card').forEach(c =>
+                c.classList.toggle('hidden', f !== 'All' && c.dataset.cat !== f));
+        }));
+
+        document.querySelectorAll('.save-btn').forEach(btn => btn.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/schools/toggle', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: btn.dataset.name})
+                });
+                const data = await res.json();
+                if (!res.ok) { alert(data.error || 'Could not save that school.'); return; }
+                btn.textContent = data.saved ? '★ Saved' : '☆ Save';
+                btn.classList.toggle('text-amber-400', data.saved);
+                btn.classList.toggle('text-slate-300', !data.saved);
+                document.getElementById('saved-count').textContent = data.count;
+            } catch (e) { alert('Network error. Try again.'); }
+        }));
+    </script>
+    {% include '_scripts.html' %}
+</body>
+</html>

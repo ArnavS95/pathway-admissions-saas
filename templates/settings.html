@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathway - Profile Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+        .card-bg { background-color: #111726; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-bg { background-color: #0d121f; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+        .input-bg { background-color: #0d121f; border: 1px solid rgba(255, 255, 255, 0.1); color: #f8fafc; }
+        .input-bg:focus { border-color: #6366f1; outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+        .sidebar-collapsed { width: 0 !important; padding: 0 !important; overflow: hidden; border: none; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    {% include '_sidebar.html' %}
+
+    <main class="flex-1 overflow-y-auto p-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-2xl font-bold text-white mb-2">Student Profile Settings</h1>
+            <p class="text-slate-400 text-sm mb-6">Update your academic stats or intended major at any time to regenerate customized AI recommendations.</p>
+
+            <form action="/settings" method="POST" class="card-bg rounded-2xl p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">High School Name</label>
+                    <input type="text" name="student_school" value="{{ session.get('student_school', '') }}" required class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Grade Level</label>
+                        <input type="text" name="grade_level" value="{{ session.get('grade_level', '') }}" required class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Intended Major / Field</label>
+                        <input type="text" name="primary_field" value="{{ session.get('primary_field', '') }}" required class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">GPA (Unweighted)</label>
+                        <input type="text" name="gpa_estimate" value="{{ session.get('gpa_estimate', '') }}" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">GPA (Weighted)</label>
+                        <input type="text" name="gpa_weighted" value="{{ session.get('gpa_weighted', '') }}" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Class Rank</label>
+                        <input type="text" name="class_rank" value="{{ session.get('class_rank', '') }}" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">SAT / ACT</label>
+                        <input type="text" name="test_scores" value="{{ session.get('test_scores', '') }}" class="w-full px-4 py-3 rounded-xl input-bg text-sm">
+                    </div>
+                </div>
+                <div class="card-bg rounded-2xl p-6 mt-6 border border-red-500/20 bg-red-500/5">
+                    <h3 class="text-md font-bold text-red-400 mb-1">Session Management</h3>
+                    <p class="text-xs text-slate-400 mb-4">Sign out of your account securely from this device.</p>
+                    <a href="/logout" class="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs font-semibold border border-red-500/20 transition">
+                        Sign Out of Account
+                    </a>
+                </div>
+                <button type="submit" class="w-full py-3.5 btn-primary text-white font-semibold rounded-xl text-sm shadow-lg shadow-indigo-500/20 mt-4">
+                    Save Changes & Refresh AI Matches →
+                </button>
+            </form>
+
+            <!-- Document upload (the /upload route existed but nothing in the UI used it) -->
+            <form action="/upload" method="POST" enctype="multipart/form-data" class="card-bg rounded-2xl p-6 mt-6 space-y-3">
+                <h3 class="text-md font-bold text-white">Upload Transcript / Documents</h3>
+                <p class="text-xs text-slate-400">PDF, DOCX, PPTX, images, or text. The AI uses these to personalize advice.</p>
+                <input type="file" name="file" required class="block text-sm text-slate-300">
+                <button type="submit" class="px-5 py-2.5 btn-primary text-white font-semibold rounded-xl text-xs">Upload</button>
+            </form>
+        </div>
+    </main>
+    {% include '_scripts.html' %}
+</body>
+</html>

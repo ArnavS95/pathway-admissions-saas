@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathway - Compare Schools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+        .card-bg { background-color: #111726; border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-bg { background-color: #0d121f; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    {% include '_sidebar.html' %}
+
+    <main class="flex-1 overflow-y-auto p-8">
+        <div class="mb-8">
+            <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 inline-block mb-3">Side by Side</span>
+            <h1 class="text-3xl font-bold text-white">Compare Schools</h1>
+            <p class="text-slate-400 text-sm mt-1">The schools you starred on your dashboard, with real US Dept. of Education numbers.</p>
+        </div>
+
+        {% set with_data = schools | selectattr('data_source', 'equalto', 'scorecard') | list | length %}
+
+        {% if schools %}
+            {% if not with_data %}
+            <div class="mb-6 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-lg">
+                These schools have no real data yet. Make sure <code>SCORECARD_API_KEY</code> is in your <code>secrets.toml</code>, then click “Refresh matches” on the dashboard and save them again.
+            </div>
+            {% endif %}
+
+            <div class="card-bg rounded-2xl p-2 overflow-x-auto mb-6">
+                <table class="w-full text-sm min-w-[640px]">
+                    <thead>
+                        <tr class="text-left">
+                            <th class="p-4 w-44"></th>
+                            {% for c in schools %}
+                            <th class="p-4 align-top">
+                                <div class="font-bold text-white">{{ c.scorecard_name or c.name }}</div>
+                                <div class="text-xs text-slate-500 font-normal">{% if c.city %}{{ c.city }}, {{ c.state }}{% else %}&nbsp;{% endif %}</div>
+                                <button type="button" class="remove-btn mt-2 text-[11px] text-red-400 hover:underline" data-name="{{ c.name }}">✕ Remove</button>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        <tr><td class="p-4 text-slate-400">Category</td>{% for c in schools %}<td class="p-4 font-semibold text-white">{{ c.category }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Est. chance</td>{% for c in schools %}<td class="p-4 text-indigo-400 font-semibold">{% if c.match_score %}~{{ c.match_score }}%{% else %}n/a{% endif %}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Acceptance rate</td>{% for c in schools %}<td class="p-4 text-white">{{ c.admit_rate | pct }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">SAT mid-50%</td>{% for c in schools %}<td class="p-4 text-white">{% if c.sat_25 and c.sat_75 %}{{ c.sat_25 | int }}–{{ c.sat_75 | int }}{% else %}n/a{% endif %}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Cost of Attendance (Sticker Price)</td>{% for c in schools %}<td class="p-4 text-white">{{ c.net_price | usd }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">4-year grad rate</td>{% for c in schools %}<td class="p-4 text-white">{{ c.grad_rate | pct }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Median earnings (10 yrs)</td>{% for c in schools %}<td class="p-4 text-white">{{ c.earnings | usd }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Undergrad size</td>{% for c in schools %}<td class="p-4 text-white">{{ c.size | num }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Type</td>{% for c in schools %}<td class="p-4 text-white">{{ c.ownership or '—' }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400 align-top">Application strategy</td>{% for c in schools %}<td class="p-4 text-xs text-slate-300 align-top">{{ c.strategy or '—' }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400 align-top">Why it fits you</td>{% for c in schools %}<td class="p-4 text-xs text-slate-300 align-top">{{ c.reason or c.rationale or '—' }}</td>{% endfor %}</tr>
+                        <tr><td class="p-4 text-slate-400">Website</td>{% for c in schools %}<td class="p-4">{% if c.url %}<a href="{{ c.url }}" target="_blank" rel="noopener" class="text-indigo-400 hover:underline">Visit ↗</a>{% else %}—{% endif %}</td>{% endfor %}</tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {% if with_data %}
+            <div class="card-bg rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-white">What it costs vs. what graduates earn</h2>
+                <p class="text-xs text-slate-400 mt-1 mb-4">Estimated 4-year net cost (after grants) next to median yearly earnings 10 years after entering. Earnings are for students who received federal aid, so treat this as a rough comparison.</p>
+                <div class="relative h-72"><canvas id="cost-chart"></canvas></div>
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="card-bg rounded-2xl p-12 text-center">
+            <p class="text-slate-400 text-sm mb-4">You haven't saved any schools yet. Click ☆ Save on a school card in your dashboard.</p>
+            <a href="/" class="inline-block px-5 py-2.5 text-white text-sm font-semibold rounded-xl" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);">Go to Dashboard</a>
+        </div>
+        {% endif %}
+    </main>
+
+        <div id="compare-data" class="hidden" data-schools='{{ schools | tojson }}'></div>
+
+    <script>
+        document.querySelectorAll('.remove-btn').forEach(btn => btn.addEventListener('click', async () => {
+            await fetch('/schools/toggle', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name: btn.dataset.name})
+            });
+            location.reload();
+        }));
+
+        (function () {
+            const canvas = document.getElementById('cost-chart');
+            if (!canvas) return;  // the chart card only exists when schools have real data
+            const schools = JSON.parse(document.getElementById('compare-data').dataset.schools);
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: schools.map(s => s.scorecard_name || s.name),
+                    datasets: [
+                    {label: 'Estimated 4-yr Sticker Price', data: schools.map(s => s.net_price ? s.net_price * 4 : null), backgroundColor: '#f59e0b'},
+                    {label: 'Median yearly earnings, 10 yrs after entry', data: schools.map(s => s.earnings || null), backgroundColor: '#34d399'}
+                ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {y: {beginAtZero: true, ticks: {callback: v => '$' + v.toLocaleString()}}},
+                    plugins: {
+                        legend: {position: 'bottom'},
+                        tooltip: {callbacks: {label: c => c.dataset.label + ': $' + Math.round(c.raw).toLocaleString()}}
+                    }
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

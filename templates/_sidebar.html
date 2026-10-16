@@ -1,0 +1,24 @@
+{% set p = request.path %}
+{% set nav = [('/', '📊 Dashboard'), ('/compare', '⚖️ Compare Schools'), ('/chat', '💬 Live AI Advisor'), ('/courses', '📚 Coursework Planner'), ('/essays', '📝 Essay Studio'), ('/career', '💼 Career & Finance'), ('/settings', '⚙️ Settings')] %}
+<aside class="w-64 sidebar-bg flex flex-col justify-between p-6 hidden md:flex">
+    <div>
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-white tracking-wide">Pathway</h2>
+            <p class="text-xs text-slate-400 mt-1 truncate">School: <span class="text-indigo-400 font-medium">{{ session.get('student_school', 'High School') }}</span></p>
+        </div>
+
+        <nav class="space-y-2">
+            {% for href, label in nav %}
+            {% set active = (p == '/') if href == '/' else p.startswith(href) %}
+            <a href="{{ href }}" class="flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition {% if active %}bg-indigo-500/10 text-indigo-400 border border-indigo-500/20{% else %}text-slate-400 hover:text-white hover:bg-white/5{% endif %}">
+                {{ label }}
+            </a>
+            {% endfor %}
+        </nav>
+    </div>
+    <div>
+        <a href="/logout" class="flex items-center justify-center w-full py-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm font-semibold border border-red-500/20 transition">
+            Sign Out
+        </a>
+    </div>
+</aside>
