@@ -43,21 +43,18 @@ def get_secret(name):
 
 api_key = get_secret("GEMINI_API_KEY")
 
-# Getting Gemini Client
 if not api_key:
     print("WARNING: no GEMINI_API_KEY found (secrets.toml or environment variable).")
 
 client = genai.Client(api_key=api_key, http_options=types.HttpOptions(timeout=90_000))
-FAST_MODEL = "gemini-3.5-flash-lite"  # cheap + fast: reading images/transcripts
-SMART_MODEL = "gemini-3.5-flash-lite"  # chat, essays, courses, colleges, career (better reasoning)
+FAST_MODEL = "gemini-3.5-flash-lite"
+SMART_MODEL = "gemini-3.5-flash-lite"
 MODEL_NAME = FAST_MODEL
 
 DB_NAME = "users.db"
 UPLOAD_DIR = "user_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-
-# --- DATABASE SETUP ---
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
@@ -168,8 +165,6 @@ def sync_session_to_db():
         }
         save_user_profile(session["user_email"], profile_data)
 
-
-# --- DOCUMENT ---
 def extract_file_content(file_path):
     ext = os.path.splitext(file_path)[1].lower()
     try:
@@ -242,12 +237,8 @@ def get_global_context():
     - Uploaded Documents, Transcripts, & Portfolios: {get_uploaded_documents_text()}
     """
 
-
-# --- AI RESEARCH ---
-
-
 GRADES = ["9th Grade", "10th Grade", "11th Grade", "12th Grade"]
-MAX_COURSES_PER_GRADE = 8  # must match the number of course rows in courses.html / courses_update
+MAX_COURSES_PER_GRADE = 8
 RIGOR_LEVELS = ["Regular", "Honors", "AP", "IB", "Dual Credit"]
 CHAT_TOPICS = ["general", "courses", "essays", "career"]
 
@@ -491,10 +482,6 @@ def generate_4year_plan(intended_major):
         print(f"[AI Research Engine Error - Courses]: {e}")
         return []
 
-
-# --- FLASK APPLICATION ROUTES ---
-
-
 @app.route("/")
 def index():
     if not session.get("logged_in"):
@@ -599,7 +586,6 @@ Guidelines:
 Student context:
 {get_global_context()}
 """
-            # Real multi-turn conversation (skip errors, and always start on a user turn)
             history = [m for m in chats[topic][-12:] if not m.get("error")]
             while history and history[0]["role"] != "user":
                 history.pop(0)
@@ -637,7 +623,6 @@ def courses_page():
     plan_error = None
     plan = session.get("four_year_plan") or {}
 
-    # Old bug: a dict of four EMPTY lists is truthy, so a failed generation was never retried.
     if not any(plan.values()):
         major = session.get("primary_field", "General STEM")
         raw_list = generate_4year_plan(major)
@@ -815,7 +800,6 @@ def essays_critique():
         session["last_critique"] = "Your draft is very short. Paste at least a few paragraphs so there's something to critique."
         return redirect(url_for("essays_page"))
 
-    # Old bug: essay_text was never put in the prompt, so the AI was critiquing nothing.
     prompt = f"""
     You are an experienced college admissions reader and writing coach.
     Critique the student's essay below. Only comment on what is actually written in the draft.
@@ -885,7 +869,6 @@ def career_simulate():
     """
     try:
         try:
-            # Web-grounded first (salaries and rents change); fall back if quota/tooling fails
             text = call_ai(prompt, model=SMART_MODEL, grounded=True, retries=0)
         except Exception as grounded_error:
             print(f"[Career grounded search failed, falling back]: {grounded_error}")

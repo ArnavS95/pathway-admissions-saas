@@ -1,4 +1,3 @@
-<!-- Full-page overlay: only used for slow "navigate away" actions (assessment, settings, refresh) -->
 <div id="loading-overlay" class="fixed inset-0 bg-[#090d16]/85 backdrop-blur-sm z-50 flex flex-col items-center justify-center hidden">
     <div class="spinner mb-4"></div>
     <p class="text-white font-semibold text-sm">AI is thinking...</p>
@@ -32,12 +31,10 @@
     (function () {
         const overlay = document.getElementById('loading-overlay');
 
-        // Forms WITHOUT data-ai still use the full-page overlay (they navigate to another page anyway)
         document.querySelectorAll('form:not([data-ai])').forEach(f =>
             f.addEventListener('submit', () => overlay && overlay.classList.remove('hidden')));
         window.addEventListener('pageshow', () => overlay && overlay.classList.add('hidden'));
 
-        // Render the AI's markdown (headings, bullets, bold, tables)
         function renderMarkdown(root) {
             root.querySelectorAll('.md').forEach(el => {
                 if (window.marked && window.DOMPurify) {
@@ -51,16 +48,14 @@
         const chatBox = document.getElementById('chat-container');
         if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
 
-        // Post a form in the background and return the fresh copy of `selector` from the server's reply
         async function postAndExtract(form, selector) {
             const res = await fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin' });
             const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
             const fresh = doc.querySelector(selector);
-            if (!fresh) { window.location.href = res.url; return null; }  // e.g. session expired -> login page
+            if (!fresh) { window.location.href = res.url; return null; }
             return fresh;
         }
 
-        // ---------- Chat: instant user bubble + typing indicator where the reply will appear ----------
         const chatForm = document.querySelector('form[data-ai="chat"]');
         if (chatForm && chatBox) {
             const input = chatForm.querySelector('input[name="message"]');
@@ -109,7 +104,6 @@
             });
         }
 
-        // ---------- Result panels (essays, career): spinner + rotating status inside the output box ----------
         document.querySelectorAll('form[data-ai="result"]').forEach(form => {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();

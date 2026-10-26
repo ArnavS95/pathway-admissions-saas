@@ -36,13 +36,11 @@
         </div>
         {% endif %}
 
-        <!-- Tab Switcher -->
         <div class="flex bg-[#0d121f] p-1 rounded-xl mb-6 border border-white/5">
             <button onclick="switchTab('signin')" id="tab-signin-btn" class="flex-1 py-2 text-sm font-semibold rounded-lg text-white bg-[#111726] shadow">Sign In</button>
             <button onclick="switchTab('signup')" id="tab-signup-btn" class="flex-1 py-2 text-sm font-semibold rounded-lg text-slate-400 hover:text-white">Create Account</button>
         </div>
 
-        <!-- Sign In Form -->
         <form action="/login" method="POST" id="signin-form" class="space-y-4">
             <div>
                 <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Email Address</label>
@@ -55,7 +53,6 @@
             <button type="submit" class="w-full py-3 btn-primary text-white font-semibold rounded-xl text-sm mt-2 shadow-lg shadow-indigo-500/20">Sign In</button>
         </form>
 
-        <!-- Sign Up Form -->
         <form action="/signup" method="POST" id="signup-form" class="space-y-4 hidden">
             <div>
                 <label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Email Address</label>

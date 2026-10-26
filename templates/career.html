@@ -19,10 +19,8 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Sidebar -->
     {% include '_sidebar.html' %}
 
-    <!-- Main Content -->
     <main class="flex-1 overflow-y-auto p-8">
         <div class="mb-8">
             <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 inline-block mb-3">Financial Planning</span>
@@ -31,7 +29,6 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Simulation Inputs -->
             <div class="card-bg rounded-2xl p-6 h-fit">
                 <h2 class="text-lg font-bold text-white mb-4">Simulation Parameters</h2>
                 <form action="/career/simulate" method="POST" data-ai="result" data-target="#result-box" data-loading="Searching current salary data|Estimating living costs|Building your projection" class="space-y-4">   
@@ -49,7 +46,6 @@
                 </form>
             </div>
 
-            <!-- Simulation Output -->
             <div class="lg:col-span-2 card-bg rounded-2xl p-6">
                 <h2 class="text-lg font-bold text-white mb-4">Economic Trajectory Breakdown</h2>
                 <div id="result-box" class="bg-[#0d121f] border border-white/5 rounded-xl p-5 text-sm text-slate-300 min-h-[400px]">

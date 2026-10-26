@@ -19,10 +19,8 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Sidebar Navigation -->
     {% include '_sidebar.html' %}
 
-    <!-- Main Chat Workspace -->
     <main class="flex-1 flex flex-col h-screen overflow-hidden p-8">
         <div class="mb-4 flex justify-between items-center">
             <div>
@@ -31,7 +29,6 @@
             </div>
         </div>
 
-        <!-- Chat Room Tabs -->
         <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
             <a href="/chat/general" class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if active_topic == 'general' %} bg-indigo-600 text-white shadow {% else %} card-bg text-slate-400 hover:text-white {% endif %}">General Advisor</a>
             <a href="/chat/courses" class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if active_topic == 'courses' %} bg-indigo-600 text-white shadow {% else %} card-bg text-slate-400 hover:text-white {% endif %}">Coursework Strategist</a>
@@ -39,7 +36,6 @@
             <a href="/chat/career" class="px-4 py-2 rounded-xl text-xs font-semibold transition {% if active_topic == 'career' %} bg-indigo-600 text-white shadow {% else %} card-bg text-slate-400 hover:text-white {% endif %}">Career Mentor</a>
         </div>
 
-        <!-- Chat History Box -->
         <div class="flex-1 card-bg rounded-2xl p-6 flex flex-col justify-between overflow-hidden mb-4">
             <div id="chat-container" class="flex-1 overflow-y-auto space-y-4 pr-2">
                 {% if history %}
@@ -57,7 +53,6 @@
                 {% endif %}
             </div>
 
-            <!-- Message Input Form -->
             <form action="/chat/{{ active_topic }}" method="POST" data-ai="chat" class="mt-4 flex gap-3 pt-4 border-t border-white/5">
                 <input type="text" name="message" required placeholder="Ask your advisor anything..." class="flex-1 px-4 py-3 rounded-xl input-bg text-sm">
                 <button type="submit" class="px-6 py-3 btn-primary text-white font-semibold rounded-xl text-sm shrink-0 shadow-lg shadow-indigo-500/20">

@@ -19,10 +19,8 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- Sidebar -->
     {% include '_sidebar.html' %}
 
-    <!-- Main Content -->
     <main class="flex-1 overflow-y-auto p-8">
         <div class="mb-8">
             <span class="bg-indigo-500/10 text-indigo-400 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border border-indigo-500/30 inline-block mb-3">Application Studio</span>
@@ -31,7 +29,6 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-220px)]">
-            <!-- Draft Input Form -->
             <div class="card-bg rounded-2xl p-6 flex flex-col">
                 <form action="/essays/critique" method="POST" data-ai="result" data-target="#result-box" data-loading="Reading your essay|Checking structure and voice|Writing feedback" class="space-y-4 flex-1 flex flex-col">
                     <div>
@@ -48,7 +45,6 @@
                 </form>
             </div>
 
-            <!-- Feedback Display Box -->
             <div class="card-bg rounded-2xl p-6 flex flex-col">
                 <h2 class="text-lg font-bold text-white mb-4">Admissions Officer Feedback</h2>
                 <div id="result-box" class="bg-[#0d121f] border border-white/5 rounded-xl p-5 flex-1 overflow-y-auto text-sm text-slate-300 space-y-4">

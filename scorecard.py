@@ -30,7 +30,7 @@ CORE_FIELDS = [
     "school.ownership",
     "latest.student.size",
     "latest.admissions.admission_rate.overall",
-    "latest.cost.attendance.academic",
+    "latest.cost.tuition.in_state",
 ]
 FIELD_GROUPS = {
     "sat": [
@@ -48,23 +48,18 @@ ALL_FIELDS = CORE_FIELDS + [f for g in FIELD_GROUPS.values() for f in g]
 
 OWNERSHIP = {1: "Public", 2: "Private nonprofit", 3: "Private for-profit"}
 
-# Official 2018 ACT -> SAT concordance
 ACT_TO_SAT = {
     36: 1590, 35: 1540, 34: 1500, 33: 1460, 32: 1430, 31: 1400, 30: 1370, 29: 1340,
     28: 1310, 27: 1280, 26: 1240, 25: 1210, 24: 1180, 23: 1140, 22: 1110, 21: 1080,
     20: 1040, 19: 1010, 18: 970, 17: 930, 16: 890, 15: 850,
 }
 
-
 class ScorecardError(Exception):
     pass
-
 
 class ScorecardAuthError(ScorecardError):
     pass
 
-
-#student stats
 def parse_test_score(text):
     """'SAT: 1540', 'ACT 34', '1450', 'N/A' -> SAT-equivalent int or None."""
     if not text:
@@ -80,7 +75,6 @@ def parse_test_score(text):
         return ACT_TO_SAT.get(int(m.group(1)))
     return None
 
-
 def parse_gpa(text):
     if not text:
         return None
@@ -90,8 +84,6 @@ def parse_gpa(text):
     v = float(m.group(0))
     return v if 0 < v <= 5.0 else None
 
-
-# API plumbing
 def _get_json(params, timeout=15):
     url = BASE_URL + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(
@@ -100,7 +92,6 @@ def _get_json(params, timeout=15):
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return json.loads(resp.read().decode("utf-8"))
-
 
 def pick(row, path):
     """Scorecard returns flat dotted keys when you pass `fields`; handle nested too."""
@@ -114,11 +105,9 @@ def pick(row, path):
             return None
     return cur
 
-
 def _num(row, path):
     v = pick(row, path)
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
-
 
 def normalize_school(row):
     r25 = _num(row, "latest.admissions.sat_scores.25th_percentile.critical_reading")
@@ -151,19 +140,16 @@ def normalize_school(row):
         "sat_25": sat_25,
         "sat_75": sat_75,
         "sat_mid": round(sat_mid) if sat_mid else None,
-        "net_price": _num(row, "latest.cost.attendance.academic"),  # Mapped to sticker price
+        "net_price": _num(row, "latest.cost.tuition.in_state"),
         "grad_rate": _num(row, "latest.completion.completion_rate_4yr_150nt"),
         "earnings": _num(row, "latest.earnings.10_yrs_after_entry.median"),
     }
 
-
-# name matching
 def _norm(s):
     s = (s or "").lower().replace("&", " and ").replace("-", " ")
     s = re.sub(r"[^a-z0-9 ]", " ", s)
     s = re.sub(r"\b(the|of|at)\b", " ", s)
     return " ".join(s.split())
-
 
 def _best_match(wanted, rows):
     target = _norm(wanted)
@@ -181,20 +167,16 @@ def _best_match(wanted, rows):
             best, best_score = row, score
     return best if best_score >= 0.80 else None
 
-
 def _variants(name):
     v = [name, name.replace(", ", "-"), re.sub(r"^The\s+", "", name)]
     return list(dict.fromkeys(x for x in v if x))
 
-
-# cache
 def _cache_conn(db_path):
     conn = sqlite3.connect(db_path, timeout=10)
     conn.execute(
         "CREATE TABLE IF NOT EXISTS school_cache (name TEXT PRIMARY KEY, data TEXT, fetched REAL)"
     )
     return conn
-
 
 def _cache_get(db_path, name):
     try:
@@ -206,7 +188,6 @@ def _cache_get(db_path, name):
     except Exception:
         pass
     return None
-
 
 def _cache_put(db_path, name, data):
     try:
@@ -220,17 +201,13 @@ def _cache_put(db_path, name, data):
     except Exception:
         pass
 
-
-# lookup
 _ALL_FIELDS_OK = None
-
 
 def _search(variant, api_key, fields):
     data = _get_json(
         {"api_key": api_key, "school.name": variant, "fields": ",".join(fields), "per_page": 10}
     )
     return data.get("results", [])
-
 
 def _fetch_rows(variant, api_key):
     """Try the full field list, then the core fields. A 5xx or 400 only means that request failed."""
@@ -262,7 +239,6 @@ def _fetch_rows(variant, api_key):
                 last_code = str(e)
                 break
     raise ScorecardError(f"Scorecard request failed ({last_code})")
-
 
 def lookup_school(name, api_key, db_path):
     """Return a normalized dict of real stats for `name`, or None if not found."""
@@ -299,11 +275,8 @@ def lookup_school(name, api_key, db_path):
     _cache_put(db_path, name, info)
     return info
 
-
-# chance estimate
 def _phi(z):
     return 0.5 * (1 + math.erf(z / math.sqrt(2)))
-
 
 def estimate_chance(school, sat=None, gpa=None):
     """
@@ -335,7 +308,6 @@ def estimate_chance(school, sat=None, gpa=None):
         chance = min(chance, 0.65)
     return max(0.02, min(0.95, chance)), basis
 
-
 def categorize(chance):
     if chance >= 0.70:
         return "Safety"
@@ -343,11 +315,8 @@ def categorize(chance):
         return "Target"
     return "Reach"
 
-
-# enrichment
 COPY_KEYS = ["city", "state", "ownership", "url", "size", "admit_rate", "sat_25", "sat_75", "sat_mid",
              "net_price", "grad_rate", "earnings"]
-
 
 def enrich_colleges(colleges, api_key, db_path, sat=None, gpa=None, workers=5):
     def work(c):
